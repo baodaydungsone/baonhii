@@ -1,0 +1,6 @@
+{
+  "name": "AI Nhập Vai Simulator v1.70",
+  "description": "Trình giả lập chat với nhân vật AI sử dụng Gemini API, hỗ trợ chat nhóm, bộ nhớ và nhiều tính năng nâng cao.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}

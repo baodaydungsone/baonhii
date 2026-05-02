@@ -1,0 +1,52 @@
+{
+  "entities": {
+    "Note": {
+      "title": "Note",
+      "description": "A personal note or lore entry for the user.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "The title of the note." },
+        "content": { "type": "string", "description": "The content of the note." },
+        "userId": { "type": "string", "description": "The ID of the user who owns this note." },
+        "scope": { "type": "string", "enum": ["global", "character"], "description": "The scope of the note." },
+        "characterId": { "type": "string", "description": "The ID of the character this note belongs to (if scope is character)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the note was created." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "When the note was last updated." }
+      },
+      "required": ["title", "content", "userId", "scope", "createdAt", "updatedAt"]
+    },
+    "Document": {
+      "title": "Document",
+      "description": "A document uploaded for RAG (Vector Search).",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the document." },
+        "content": { "type": "string", "description": "The full text content of the document." },
+        "userId": { "type": "string", "description": "The ID of the user who uploaded this document." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the document was uploaded." },
+        "chunks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "embedding": { "type": "array", "items": { "type": "number" } }
+            }
+          },
+          "description": "Chunks of the document with their embeddings."
+        }
+      },
+      "required": ["name", "content", "userId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/notes/{noteId}": {
+      "schema": "Note",
+      "description": "Collection of user notes."
+    },
+    "/documents/{docId}": {
+      "schema": "Document",
+      "description": "Collection of documents for RAG."
+    }
+  }
+}

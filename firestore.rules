@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: notes
+    // Document ID: auto-generated
+    // Fields:
+    //   - title: string (required, 1-200 chars)
+    //   - content: string (required, 0-50000 chars)
+    //   - userId: string (required, must match auth.uid)
+    //   - createdAt: timestamp (required)
+    //   - updatedAt: timestamp (required)
+    //
+    // Collection: documents
+    // Document ID: auto-generated
+    // Fields:
+    //   - name: string (required, 1-200 chars)
+    //   - content: string (required)
+    //   - userId: string (required, must match auth.uid)
+    //   - createdAt: timestamp (required)
+    //   - chunks: list (optional, max 100 items)
+    //     - text: string
+    //     - embedding: list of numbers
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "baodaydungso000@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidNote(data) {
+      return data.keys().hasAll(['title', 'content', 'userId', 'scope', 'createdAt', 'updatedAt']) &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.content is string && data.content.size() <= 50000 &&
+             data.userId == request.auth.uid &&
+             data.scope in ['global', 'character'] &&
+             (!('characterId' in data) || data.characterId is string) &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidDocument(data) {
+      return data.keys().hasAll(['name', 'content', 'userId', 'createdAt']) &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 200 &&
+             data.content is string &&
+             data.userId == request.auth.uid &&
+             data.createdAt is timestamp &&
+             (!('chunks' in data) || (data.chunks is list && data.chunks.size() <= 500));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /notes/{noteId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidNote(request.resource.data);
+      allow update: if isOwner(resource.data.userId) && isValidNote(request.resource.data) && 
+                      request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    match /documents/{docId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidDocument(request.resource.data);
+      allow update: if isOwner(resource.data.userId) && isValidDocument(request.resource.data) &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create, update: if isAdmin(); // Only admins can manage users for now
+    }
+  }
+}
